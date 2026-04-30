@@ -1,19 +1,25 @@
-// Stub of the rust-gbt NAPI module. Backend imports these symbols at
-// module load time; RUST_GBT=false in the runtime config keeps them
-// from being instantiated. If you do hit one, RUST_GBT was left on.
-const STUB_ERR = 'rust-gbt stub: build the Rust NAPI addon, or set MEMPOOL.RUST_GBT=false in backend config';
+// Stub of the rust-gbt NAPI module. The backend instantiates GbtGenerator
+// at class-field-initialization time (before the runtime RUST_GBT flag is
+// checked), so the constructors must succeed. The make/update methods are
+// the actual runtime entry points — those throw if reached, which only
+// happens if RUST_GBT=true in the backend config.
+const STUB_ERR = 'rust-gbt stub: this build was packaged without the Rust NAPI addon. Set MEMPOOL.RUST_GBT=false in the backend config.';
 
 class GbtGenerator {
-  constructor() { throw new Error(STUB_ERR); }
+  constructor() {}
+  make() { return Promise.reject(new Error(STUB_ERR)); }
+  update() { return Promise.reject(new Error(STUB_ERR)); }
 }
 class GbtResult {
-  constructor() { throw new Error(STUB_ERR); }
+  constructor() {
+    this.blocks = [];
+    this.blockWeights = [];
+    this.clusters = [];
+    this.rates = [];
+    this.overflow = [];
+  }
 }
-class ThreadTransaction {
-  constructor() { throw new Error(STUB_ERR); }
-}
-class ThreadAcceleration {
-  constructor() { throw new Error(STUB_ERR); }
-}
+class ThreadTransaction {}
+class ThreadAcceleration {}
 
 module.exports = { GbtGenerator, GbtResult, ThreadTransaction, ThreadAcceleration };
