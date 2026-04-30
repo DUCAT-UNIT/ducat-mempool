@@ -70,6 +70,9 @@ let
       DATABASE = "mempool";
       USERNAME = "mempool";
       PASSWORD = "mempool";
+      # Backend writes a pidlock to PID_DIR/mempool-<dbname>.pid; falls
+      # back to __dirname (inside the read-only nix store) if unset.
+      PID_DIR = cfg.stateDir;
     };
     SYSLOG = { ENABLED = false; };
     STATISTICS = { ENABLED = true; };
