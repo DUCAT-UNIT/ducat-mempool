@@ -1,0 +1,65 @@
+<div class="ducat-recent-vaults">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Recent vault actions</h2>
+    </div>
+    <div class="card-body">
+      @if (!loaded) {
+        <div class="muted text-center">Loading…</div>
+      } @else if (!reachable) {
+        <div class="muted text-center">Validator unreachable at <code>localhost:4000</code></div>
+      } @else if (items.length === 0) {
+        <div class="muted text-center">No vault actions yet.</div>
+      } @else {
+        <table class="table table-sm table-borderless mb-0">
+          <thead>
+            <tr>
+              <th class="col-time">Time</th>
+              <th class="col-action">Action</th>
+              <th>Vault</th>
+              <th class="text-end col-num">BTC</th>
+              <th class="text-end col-num">UNIT</th>
+              <th class="text-end col-ratio">Ratio</th>
+              <th>TX</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (it of items; track it.txid) {
+              <tr>
+                <td class="col-time muted" [title]="(it.block_time * 1000) | date:'medium'">
+                  {{ timeAgo(it.block_time) }}
+                </td>
+                <td class="col-action">
+                  <span class="badge" [ngClass]="badgeClass(it.action)">{{ it.action }}</span>
+                </td>
+                <td>
+                  <a [routerLink]="['/tx' | relativeUrl, it.vault_id]">
+                    <app-truncate [text]="it.vault_id" [lastChars]="6"></app-truncate>
+                  </a>
+                </td>
+                <td class="text-end col-num">
+                  {{ (it.btc_value / 1e8) | number:'1.0-4' }}
+                </td>
+                <td class="text-end col-num">
+                  {{ (it.unit_value / 100) | number:'1.0-2' }}
+                </td>
+                <td class="text-end col-ratio">
+                  @if (it.vault_ratio) {
+                    {{ (it.vault_ratio * 100) | number:'1.0-0' }}%
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+                <td>
+                  <a [routerLink]="['/tx' | relativeUrl, it.txid]">
+                    <app-truncate [text]="it.txid" [lastChars]="6"></app-truncate>
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>

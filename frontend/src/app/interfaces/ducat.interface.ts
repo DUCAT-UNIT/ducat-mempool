@@ -42,6 +42,22 @@ export interface DucatProtoTerm {
   value: any[];
 }
 
+export interface DucatStatsTxItem {
+  txid: string;
+  vault_id: string;
+  action: string;
+  block_time: number;
+  btc_value: number;     // sats
+  unit_value: number;    // cents
+  vault_ratio?: number;  // fraction (1.5 = 150%)
+}
+
+export interface DucatStatsTxResp {
+  data: DucatStatsTxItem[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
 export interface DucatProtoProfile {
   anchor_id: string;
   anchor_height: number;

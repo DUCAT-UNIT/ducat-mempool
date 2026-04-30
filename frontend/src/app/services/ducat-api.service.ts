@@ -6,6 +6,7 @@ import {
   DucatTxData,
   DucatHeightInfo,
   DucatStatsVolume,
+  DucatStatsTxResp,
   DucatPriceLatest,
   DucatProtoProfile,
   DucatVaultProfile,
@@ -40,6 +41,12 @@ export class DucatApiService {
   getHeight$(): Observable<DucatHeightInfo | null> {
     return this.httpClient
       .get<DucatHeightInfo>(`${this.apiBaseUrl}/api/height`)
+      .pipe(catchError(() => of(null)));
+  }
+
+  getStatsTx$(pageSize = 15): Observable<DucatStatsTxResp | null> {
+    return this.httpClient
+      .get<DucatStatsTxResp>(`${this.apiBaseUrl}/api/stats/tx?page_size=${pageSize}`)
       .pipe(catchError(() => of(null)));
   }
 

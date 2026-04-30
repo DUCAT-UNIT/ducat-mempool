@@ -1,6 +1,7 @@
 
 <div class="container-xl dashboard-container" *ngIf="(network$ | async) !== 'liquid'; else liquidDashboard">
   <app-ducat-stats-card></app-ducat-stats-card>
+  <app-ducat-recent-vaults></app-ducat-recent-vaults>
   <div class="row row-cols-1 row-cols-md-2" *ngIf="{ value: (mempoolInfoData$ | async) } as mempoolInfoData">
     <ng-container>
       <div class="col card-wrapper">
