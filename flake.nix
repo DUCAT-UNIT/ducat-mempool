@@ -68,6 +68,11 @@
             node generate-themes.js
             node generate-config.js
             npx ng build --configuration production
+            # The production angular.json drops `src/resources` from
+            # `assets`; upstream's full build script rsyncs it in after
+            # ng build (handled by sync-assets.js). Mirror that here so
+            # static files like /resources/mining-pools/default.svg ship.
+            cp -r src/resources/. dist/mempool/browser/resources/
             runHook postBuild
           '';
 
