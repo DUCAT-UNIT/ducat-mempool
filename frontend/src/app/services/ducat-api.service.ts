@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, shareReplay } from 'rxjs/operators';
 import {
   DucatTxData,
   DucatHeightInfo,
   DucatStatsVolume,
   DucatPriceLatest,
+  DucatProtoProfile,
+  DucatVaultProfile,
 } from '@interfaces/ducat.interface';
 
 @Injectable({
@@ -14,12 +16,21 @@ import {
 })
 export class DucatApiService {
   private apiBaseUrl = 'http://localhost:4000';
+  // Proto profile changes only when the anchor contract is republished
+  // (rare). Cache for the lifetime of the service, refreshable on demand.
+  private protoCache$?: Observable<DucatProtoProfile | null>;
 
   constructor(private httpClient: HttpClient) {}
 
   getTxData$(txid: string): Observable<DucatTxData | null> {
     return this.httpClient
       .get<DucatTxData>(`${this.apiBaseUrl}/api/tx/${txid}`)
+      .pipe(catchError(() => of(null)));
+  }
+
+  getVaultLatest$(vaultId: string): Observable<DucatVaultProfile | null> {
+    return this.httpClient
+      .get<DucatVaultProfile>(`${this.apiBaseUrl}/api/vault/${vaultId}/latest`)
       .pipe(catchError(() => of(null)));
   }
 
@@ -36,6 +47,18 @@ export class DucatApiService {
     return this.httpClient
       .get<DucatStatsVolume>(url)
       .pipe(catchError(() => of(null)));
+  }
+
+  getProtoLatest$(forceRefresh = false): Observable<DucatProtoProfile | null> {
+    if (forceRefresh || !this.protoCache$) {
+      this.protoCache$ = this.httpClient
+        .get<DucatProtoProfile>(`${this.apiBaseUrl}/api/proto/latest`)
+        .pipe(
+          catchError(() => of(null)),
+          shareReplay(1),
+        );
+    }
+    return this.protoCache$;
   }
 
   getPriceLatest$(): Observable<DucatPriceLatest | null> {

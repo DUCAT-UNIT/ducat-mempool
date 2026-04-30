@@ -22,6 +22,44 @@ export interface DucatPriceLatest {
   block_height: number;
 }
 
+export interface DucatAssetProfile {
+  div: number;       // decimal divisibility
+  id: string;        // rune id "height:index"
+  label: string;     // e.g. "DUCAT•UNIT•MTNY"
+  symbol: string;    // e.g. "$"
+  supply: string;
+}
+
+export interface DucatProtoMember {
+  group: number;     // 21 = guardian, 22 = oracle
+  idx: number;
+  pubkey: string;
+}
+
+export interface DucatProtoTerm {
+  group: number;
+  key: number;
+  value: any[];
+}
+
+export interface DucatProtoProfile {
+  anchor_id: string;
+  anchor_height: number;
+  anchor_index: number;
+  anchor_txid: string;
+  boot_height: number;
+  chain_network: string;
+  domain_hash: string;
+  chain_height: number;
+  contract_height: number;
+  contract_index: number;
+  contract_txid: string;
+  contract_id: string;
+  proto_assets: DucatAssetProfile[];
+  proto_members: DucatProtoMember[];
+  proto_terms: DucatProtoTerm[];
+}
+
 export interface DucatTxData {
   is_ducat: boolean;
   action?: string;

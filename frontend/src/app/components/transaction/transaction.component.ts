@@ -41,7 +41,7 @@ import { ZONE_SERVICE } from '@app/injection-tokens';
 import { MiningService, MiningStats } from '@app/services/mining.service';
 import { ETA, EtaService } from '@app/services/eta.service';
 import { DucatApiService } from '@app/services/ducat-api.service';
-import { DucatTxData } from '@interfaces/ducat.interface';
+import { DucatProtoProfile, DucatTxData, DucatVaultProfile } from '@interfaces/ducat.interface';
 
 export interface Pool {
   id: number;
@@ -121,7 +121,11 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   isAcceleration: boolean = false;
   accelerationCanceled: boolean = false;
   ducatData: DucatTxData | null = null;
+  ducatProto: DucatProtoProfile | null = null;
+  ducatVaultLatest: DucatVaultProfile | null = null;
   ducatSubscription: Subscription;
+  ducatProtoSubscription: Subscription;
+  ducatVaultLatestSubscription: Subscription;
   filters: Filter[] = [];
   showCpfpDetails = false;
   miningStats: MiningStats;
@@ -700,10 +704,28 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           this.tx.feePerVsize = tx.fee / (tx.weight / 4);
           this.txChanged$.next(true);
           this.ducatData = null;
+          this.ducatVaultLatest = null;
           this.ducatSubscription?.unsubscribe();
+          this.ducatVaultLatestSubscription?.unsubscribe();
           this.ducatSubscription = this.ducatApiService.getTxData$(tx.txid).subscribe((data) => {
             this.ducatData = data;
+            // Once we know the vault id, fetch its latest state so the banner
+            // can link to the most recent action's tx — independent of which
+            // historical action the user is currently viewing.
+            if (data?.vault_id) {
+              this.ducatVaultLatestSubscription = this.ducatApiService
+                .getVaultLatest$(data.vault_id)
+                .subscribe((latest) => {
+                  this.ducatVaultLatest = latest;
+                });
+            }
           });
+          if (!this.ducatProto) {
+            this.ducatProtoSubscription?.unsubscribe();
+            this.ducatProtoSubscription = this.ducatApiService.getProtoLatest$().subscribe((proto) => {
+              this.ducatProto = proto;
+            });
+          }
           this.isLoadingTx = false;
           this.error = undefined;
           this.loadingCachedTx = false;
@@ -1254,6 +1276,79 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
     this.txConfirmedSubscription?.unsubscribe();
     this.currencyChangeSubscription?.unsubscribe();
     this.ducatSubscription?.unsubscribe();
+    this.ducatProtoSubscription?.unsubscribe();
+    this.ducatVaultLatestSubscription?.unsubscribe();
     this.leaveTransaction();
+  }
+
+  // ---- Ducat banner helpers ---------------------------------------------
+  // The validator only populates `vaults[0]` when the vault output is the
+  // current UTXO (i.e. unspent). For an open/deposit/withdraw/borrow whose
+  // vault output has since been spent by the next action, `vaults` is empty.
+  // We fall back to `vault_stone` (committed in this tx) and the vault
+  // output's amount so the banner stays useful for the whole vault history.
+
+  get ducatVault(): any | null {
+    return this.ducatData?.vaults?.[0] ?? null;
+  }
+
+  // Vault output sat amount, located by output_type === 'vault' in the tx.
+  get ducatCollateralSats(): number | null {
+    if (this.ducatVault?.vault_value != null) return this.ducatVault.vault_value;
+    const vaultOut = this.ducatData?.outputs?.find(o => o.type === 'vault');
+    return vaultOut ? vaultOut.value : null;
+  }
+
+  get ducatUnitDebtCents(): number {
+    if (this.ducatVault?.unit_balance != null) return this.ducatVault.unit_balance;
+    return this.ducatData?.vault_stone?.unit_balance ?? 0;
+  }
+
+  // Validator returns a fraction (1.5 = 150%). We compute from vault_stone
+  // when no profile is present: ratio = (sats/1e8 * base_price) / (cents/100).
+  get ducatCollateralRatio(): number | null {
+    if (this.ducatVault?.vault_ratio) return this.ducatVault.vault_ratio;
+    const sats = this.ducatCollateralSats;
+    const debtCents = this.ducatUnitDebtCents;
+    const basePrice = this.ducatData?.vault_stone?.base_price;
+    if (!sats || !debtCents || !basePrice) return null;
+    const collateralUsd = (sats / 1e8) * basePrice;
+    const debtUsd = debtCents / 100;
+    return collateralUsd / debtUsd;
+  }
+
+  // Resolve guardian pubkeys: prefer the profile (when present) otherwise
+  // look them up by index in the proto's member list.
+  get ducatGuardians(): string[] {
+    if (this.ducatVault?.guard_members?.length) return this.ducatVault.guard_members;
+    const indices = this.ducatData?.vault_stone?.guardian_indices ?? [];
+    if (!this.ducatProto || indices.length === 0) return [];
+    const guardiansByIdx = new Map<number, string>();
+    for (const m of this.ducatProto.proto_members) {
+      if (m.group === 21) guardiansByIdx.set(m.idx, m.pubkey);
+    }
+    return indices
+      .map((i: number) => guardiansByIdx.get(i))
+      .filter((pk): pk is string => !!pk);
+  }
+
+  // Anchor link target — prefer profile's contract_id, fall back to the
+  // proto's contract_id so the link still works before vaults[0] arrives.
+  get ducatAnchorContractId(): string | null {
+    return this.ducatVault?.contract_id ?? this.ducatProto?.contract_id ?? null;
+  }
+
+  // Latest action of the vault (could be many txs ahead of the one being
+  // viewed). coin_id is "<txid>:<vout>" of the current vault UTXO.
+  get ducatVaultLatestTxid(): string | null {
+    const coinId = this.ducatVaultLatest?.coin_id;
+    if (!coinId) return null;
+    return coinId.split(':')[0] || null;
+  }
+
+  // True when the current tx is itself the latest vault action — used to
+  // suppress the "→ go to latest" link in that case.
+  get ducatIsViewingLatest(): boolean {
+    return !!(this.ducatVaultLatestTxid && this.tx?.txid === this.ducatVaultLatestTxid);
   }
 }

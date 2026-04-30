@@ -3,7 +3,7 @@ import { StateService, SignaturesMode } from '@app/services/state.service';
 import { CacheService } from '@app/services/cache.service';
 import { Observable, ReplaySubject, BehaviorSubject, merge, Subscription, of, forkJoin } from 'rxjs';
 import { Outspend, Transaction, Vin, Vout } from '@interfaces/electrs.interface';
-import { DucatTxData, DucatTxOutput } from '@interfaces/ducat.interface';
+import { DucatAssetProfile, DucatProtoProfile, DucatTxData, DucatTxOutput } from '@interfaces/ducat.interface';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
 import { environment } from '@environments/environment';
 import { AssetsService } from '@app/services/assets.service';
@@ -48,6 +48,7 @@ export class TransactionsListComponent implements OnInit, OnChanges, OnDestroy {
   @Input() txPreview = false;
   @Input() forceSignaturesMode: SignaturesMode = null;
   @Input() ducatData: DucatTxData | null = null;
+  @Input() ducatProto: DucatProtoProfile | null = null;
 
   @Output() loadMore = new EventEmitter();
 
@@ -593,6 +594,48 @@ export class TransactionsListComponent implements OnInit, OnChanges, OnDestroy {
 
   getDucatOutput(vindex: number): DucatTxOutput | undefined {
     return this.ducatData?.outputs?.find(o => o.vout === vindex);
+  }
+
+  // Map asset_id ("height:index") to its profile from the cached anchor data.
+  getDucatAssetProfile(assetId: string): DucatAssetProfile | undefined {
+    return this.ducatProto?.proto_assets?.find(a => a.id === assetId);
+  }
+
+  // Render rune amount + reserve scaled by the asset's divisibility, formatted
+  // with the friendly name. Falls back to raw "<amt> <id>" when the asset
+  // isn't in the registry.
+  formatDucatAsset(asset: { asset_id: string; amount: number; reserve: number }): string {
+    const profile = this.getDucatAssetProfile(asset.asset_id);
+    const raw = (asset.amount || 0) + (asset.reserve || 0);
+    if (!profile) {
+      return `${raw} ${asset.asset_id}`;
+    }
+    const scaled = raw / Math.pow(10, profile.div || 0);
+    // Format with up to `div` fraction digits, but trim trailing zeros.
+    const formatted = profile.div > 0
+      ? scaled.toLocaleString(undefined, { maximumFractionDigits: profile.div })
+      : scaled.toLocaleString();
+    return `${formatted} ${this.shortRuneName(asset.asset_id, profile.label)}`;
+  }
+
+  // Resolve a token's display name. Disambiguating by label segment alone is
+  // fragile (e.g. "DUCAT•UNIT•MTNY" has both DUCAT and UNIT), so prefer the
+  // anchor's term keys: UnitAssetId (247) → "UNIT", GovernTokenAssetId (201)
+  // → "DUCAT". For everything else, fall back to the middle label segment.
+  private shortRuneName(assetId: string, label: string): string {
+    if (this.ducatProto) {
+      const matchTerm = (key: number): boolean => {
+        const term = this.ducatProto!.proto_terms.find(t => t.key === key);
+        return !!term && term.value.some(v => v === assetId);
+      };
+      if (matchTerm(247)) return 'UNIT';
+      if (matchTerm(201)) return 'DUCAT';
+    }
+    if (!label) return assetId;
+    const parts = label.split(/[•.\s]/).filter(Boolean);
+    if (parts.length >= 3) return parts[parts.length - 2];   // typical "PREFIX•NAME•SUFFIX"
+    if (parts.length === 2) return parts[0];
+    return parts[0] || assetId;
   }
 
   toggleShowFullScript(vinIndex: number): void {

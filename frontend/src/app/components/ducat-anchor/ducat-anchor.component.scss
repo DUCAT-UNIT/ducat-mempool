@@ -1,0 +1,68 @@
+.ducat-anchor-page {
+  padding: 1rem 0 2rem;
+
+  h1 {
+    margin-bottom: 1rem;
+  }
+
+  .card {
+    background: var(--card-bg, #1d1f31);
+    border: none;
+  }
+
+  .card-header {
+    background: rgba(247, 147, 26, 0.08);
+    border-bottom: 1px solid rgba(247, 147, 26, 0.25);
+  }
+
+  // Long hex strings (pubkeys, txids, contract ids) routinely exceed any
+  // reasonable column width, so allow them to wrap mid-string. The cells
+  // themselves use a fixed layout so the wrapping kicks in instead of
+  // forcing horizontal overflow on the page.
+  .table {
+    table-layout: fixed;
+    width: 100%;
+
+    td, th {
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+    }
+
+    code {
+      font-size: 0.85em;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+  }
+
+  .label {
+    width: 200px;
+    color: #b0b0b0;
+    white-space: nowrap;
+    word-break: normal;
+  }
+
+  // Explicit column widths for table-layout: fixed. Without these the
+  // browser splits available width equally and the narrow numeric columns
+  // (idx, tag) end up far too wide while the value column gets cramped.
+  .col-idx {
+    width: 60px;
+    word-break: normal;
+  }
+
+  .col-tag {
+    width: 60px;
+    word-break: normal;
+  }
+
+  .col-param {
+    width: 220px;
+    word-break: normal;
+  }
+
+  .muted {
+    color: #b0b0b0;
+  }
+}

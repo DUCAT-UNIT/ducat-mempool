@@ -73,29 +73,69 @@
                   </td>
                 </tr>
               }
-              @if (ducatData.vaults?.length) {
+              @if (ducatVaultLatest) {
+                <tr>
+                  <td>Latest action</td>
+                  <td>
+                    <span class="badge bg-secondary me-1">{{ ducatVaultLatest.vault_action }}</span>
+                    @if (ducatIsViewingLatest) {
+                      <span class="text-muted">(this transaction)</span>
+                    } @else if (ducatVaultLatestTxid) {
+                      <a [routerLink]="['/tx/' | relativeUrl, ducatVaultLatestTxid]">
+                        <app-truncate [text]="ducatVaultLatestTxid" [lastChars]="12"></app-truncate>
+                      </a>
+                      @if (ducatVaultLatest.block_height) {
+                        <span class="text-muted">at block {{ ducatVaultLatest.block_height | number }}</span>
+                      }
+                    } @else if (ducatVaultLatest.vault_action === 'burned') {
+                      <span class="text-muted">vault closed</span>
+                    }
+                  </td>
+                </tr>
+              }
+              @if (ducatCollateralSats != null) {
                 <tr>
                   <td>Collateral</td>
-                  <td><app-amount [satoshis]="ducatData.vaults[0].vault_value"></app-amount></td>
+                  <td><app-amount [satoshis]="ducatCollateralSats"></app-amount></td>
                 </tr>
-                @if (ducatData.vaults[0].unit_balance > 0) {
-                  <tr>
-                    <td>UNIT Debt</td>
-                    <td>{{ ducatData.vaults[0].unit_balance / 100 | number:'1.2-2' }} UNIT</td>
-                  </tr>
-                }
-                @if (ducatData.vaults[0].vault_ratio) {
-                  <tr>
-                    <td>Collateral Ratio</td>
-                    <td>{{ ducatData.vaults[0].vault_ratio | number:'1.0-0' }}%</td>
-                  </tr>
-                }
+              }
+              @if (ducatUnitDebtCents > 0) {
+                <tr>
+                  <td>UNIT Debt</td>
+                  <td>{{ ducatUnitDebtCents / 100 | number:'1.2-2' }} UNIT</td>
+                </tr>
+              }
+              @if (ducatCollateralRatio) {
+                <tr>
+                  <td>Collateral Ratio</td>
+                  <td>{{ ducatCollateralRatio * 100 | number:'1.0-1' }}%</td>
+                </tr>
               }
               @if (ducatData.vault_stone) {
                 <tr>
                   <td>Vault Stone</td>
-                  <td>{{ ducatData.vault_stone.encumbered ? 'Encumbered' : 'Cleared' }}
-                    (v{{ ducatData.vault_stone.version }}, guardians: {{ ducatData.vault_stone.guardian_indices.join(', ') }})</td>
+                  <td>
+                    {{ ducatData.vault_stone.encumbered ? 'Encumbered' : 'Cleared' }}
+                    (v{{ ducatData.vault_stone.version }})
+                    @if (ducatGuardians.length) {
+                      &middot; Guardians:
+                      @for (gp of ducatGuardians; track gp; let last = $last) {
+                        @if (ducatAnchorContractId) {
+                          <a [routerLink]="['/anchor' | relativeUrl, ducatAnchorContractId]">
+                            <app-truncate [text]="gp" [lastChars]="6"></app-truncate>
+                          </a>
+                        } @else {
+                          <app-truncate [text]="gp" [lastChars]="6"></app-truncate>
+                        }{{ last ? '' : ', ' }}
+                      }
+                    } @else if (ducatData.vault_stone.guardian_indices?.length) {
+                      &middot; Guardian indices: {{ ducatData.vault_stone.guardian_indices.join(', ') }}
+                    }
+                    @if (ducatAnchorContractId) {
+                      <br>
+                      <a class="text-muted" [routerLink]="['/anchor' | relativeUrl, ducatAnchorContractId]">View anchor contract →</a>
+                    }
+                  </td>
                 </tr>
                 @if (ducatData.vault_stone.base_price) {
                   <tr>
@@ -257,7 +297,7 @@
     </div>
 
 
-    <app-transactions-list #txList [transactions]="[tx]" [cached]="isCached" [errorUnblinded]="errorUnblinded" [inputIndex]="inputIndex" [outputIndex]="outputIndex" [transactionPage]="true" [ducatData]="ducatData"></app-transactions-list>
+    <app-transactions-list #txList [transactions]="[tx]" [cached]="isCached" [errorUnblinded]="errorUnblinded" [inputIndex]="inputIndex" [outputIndex]="outputIndex" [transactionPage]="true" [ducatData]="ducatData" [ducatProto]="ducatProto"></app-transactions-list>
 
     <div class="title text-start">
       <h2 i18n="transaction.details|Transaction Details">Details</h2>

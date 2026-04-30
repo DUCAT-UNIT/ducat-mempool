@@ -350,7 +350,7 @@
                         'bg-secondary': ducatOut.type === 'other'
                       }">{{ ducatOut.type === 'op_return' ? 'Vault Stone' : ducatOut.type === 'unit_mint' ? 'UNIT Mint' : ducatOut.type === 'ducat_mint' ? 'DUCAT Mint' : ducatOut.type | titlecase }}</span>
                       @for (asset of ducatOut.assets; track asset.asset_id) {
-                        <span class="badge bg-info ms-1">{{ asset.amount + asset.reserve }} {{ asset.asset_id }}</span>
+                        <span class="badge bg-info ms-1" [title]="asset.asset_id">{{ formatDucatAsset(asset) }}</span>
                       }
                     </div>
                   }

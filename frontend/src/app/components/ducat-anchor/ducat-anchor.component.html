@@ -1,0 +1,149 @@
+<div class="container-xl ducat-anchor-page">
+  <h1>Anchor Contract</h1>
+
+  @if (loading) {
+    <div class="muted">Loading…</div>
+  } @else if (!reachable) {
+    <div class="alert alert-warning">Validator unreachable at <code>localhost:4000</code></div>
+  } @else if (!proto) {
+    <div class="alert alert-warning">No anchor contract data available.</div>
+  } @else {
+    @if (contractId && !matchesRoute) {
+      <div class="alert alert-info">
+        Showing the currently active anchor contract.
+        Requested id <code>{{ contractId }}</code> doesn't match the validator's active contract,
+        anchor, or anchor txid.
+      </div>
+    }
+
+    <!-- Identity -->
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Identity</h5></div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tbody>
+            <tr><td class="label">Contract ID</td><td><code>{{ proto.contract_id }}</code></td></tr>
+            <tr><td class="label">Anchor ID</td><td><code>{{ proto.anchor_id }}</code></td></tr>
+            <tr>
+              <td class="label">Anchor TX</td>
+              <td>
+                <a [routerLink]="['/tx' | relativeUrl, proto.anchor_txid]"><code>{{ proto.anchor_txid }}</code></a>
+                (block {{ proto.anchor_height | number }}, idx {{ proto.anchor_index }})
+              </td>
+            </tr>
+            <tr><td class="label">Boot height</td><td>{{ proto.boot_height | number }}</td></tr>
+            <tr><td class="label">Network</td><td>{{ proto.chain_network }}</td></tr>
+            <tr><td class="label">Domain hash</td><td><code>{{ proto.domain_hash }}</code></td></tr>
+            <tr><td class="label">Validator chain height</td><td>{{ proto.chain_height | number }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Assets -->
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Assets ({{ assets.length }})</h5></div>
+      <div class="card-body">
+        @if (assets.length === 0) {
+          <div class="muted">No assets registered.</div>
+        } @else {
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Rune ID</th>
+                <th>Label</th>
+                <th>Symbol</th>
+                <th>Decimals</th>
+                <th>Supply</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of assets; track a.id) {
+                <tr>
+                  <td><code>{{ a.id }}</code></td>
+                  <td>{{ a.label }}</td>
+                  <td>{{ a.symbol }}</td>
+                  <td>{{ a.div }}</td>
+                  <td>{{ a.supply }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+
+    <!-- Members -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card mb-3">
+          <div class="card-header"><h5 class="mb-0">Guardians ({{ guardians.length }})</h5></div>
+          <div class="card-body">
+            @if (guardians.length === 0) {
+              <div class="muted">No guardians registered.</div>
+            } @else {
+              <table class="table table-sm">
+                <thead><tr><th class="col-idx">Idx</th><th>Public key</th></tr></thead>
+                <tbody>
+                  @for (m of guardians; track m.pubkey) {
+                    <tr>
+                      <td class="col-idx">{{ m.idx }}</td>
+                      <td><code>{{ m.pubkey }}</code></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card mb-3">
+          <div class="card-header"><h5 class="mb-0">Oracles ({{ oracles.length }})</h5></div>
+          <div class="card-body">
+            @if (oracles.length === 0) {
+              <div class="muted">No oracles registered.</div>
+            } @else {
+              <table class="table table-sm">
+                <thead><tr><th class="col-idx">Idx</th><th>Public key</th></tr></thead>
+                <tbody>
+                  @for (m of oracles; track m.pubkey) {
+                    <tr>
+                      <td class="col-idx">{{ m.idx }}</td>
+                      <td><code>{{ m.pubkey }}</code></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Parameters</h5></div>
+      <div class="card-body">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th class="col-tag">Tag</th>
+              <th class="col-param">Parameter</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of displayTerms; track t.key) {
+              <tr>
+                <td class="col-tag muted">{{ t.key }}</td>
+                <td class="col-param">{{ t.label }}</td>
+                <td>{{ t.values.join(', ') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

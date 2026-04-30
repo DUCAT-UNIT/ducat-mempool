@@ -17,6 +17,7 @@ import { ServerStatusComponent } from '@components/server-health/server-status.c
 import { FaucetComponent } from '@components/faucet/faucet.component';
 import { SimpleProofWidgetComponent } from '@components/simpleproof-widget/simpleproof-widget.component';
 import { SimpleProofCuboWidgetComponent } from '@components/simpleproof-widget/simpleproof-cubo-widget.component';
+import { DucatAnchorComponent } from '@components/ducat-anchor/ducat-anchor.component';
 
 const browserWindow = window || {};
 // @ts-ignore
@@ -35,6 +36,14 @@ const routes: Routes = [
       {
         path: 'tx/push',
         component: PushTransactionComponent,
+      },
+      {
+        path: 'anchor/:contract_id',
+        component: DucatAnchorComponent,
+      },
+      {
+        path: 'anchor',
+        component: DucatAnchorComponent,
       },
       {
         path: 'pushtx',

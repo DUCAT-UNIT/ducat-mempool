@@ -107,6 +107,7 @@ import { ToggleComponent } from '@app/shared/components/toggle/toggle.component'
 import { GeolocationComponent } from '@app/shared/components/geolocation/geolocation.component';
 import { TestnetAlertComponent } from '@app/shared/components/testnet-alert/testnet-alert.component';
 import { DucatSyncBannerComponent } from '@app/shared/components/ducat-sync-banner/ducat-sync-banner.component';
+import { DucatAnchorComponent } from '@components/ducat-anchor/ducat-anchor.component';
 import { GlobalFooterComponent } from '@app/shared/components/global-footer/global-footer.component';
 import { MempoolErrorComponent } from '@app/shared/components/mempool-error/mempool-error.component';
 import { MiningPoolComponent } from '@app/shared/components/mining-pool/mining-pool.component';
@@ -235,6 +236,7 @@ import { GithubLogin } from '@components/github-login.component/github-login.com
     GeolocationComponent,
     TestnetAlertComponent,
     DucatSyncBannerComponent,
+    DucatAnchorComponent,
     GlobalFooterComponent,
     MiningPoolComponent,
     CalculatorComponent,
@@ -391,6 +393,7 @@ import { GithubLogin } from '@components/github-login.component/github-login.com
     GeolocationComponent,
     TestnetAlertComponent,
     DucatSyncBannerComponent,
+    DucatAnchorComponent,
     MiningPoolComponent,
     PreviewTitleComponent,
     GlobalFooterComponent,
