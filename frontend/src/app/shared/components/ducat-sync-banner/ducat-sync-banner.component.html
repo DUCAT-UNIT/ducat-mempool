@@ -1,0 +1,10 @@
+@if (visible) {
+  <div class="container p-lg-0 pb-0 ducat-sync-banner-container">
+    <div class="alert alert-warning mb-0 text-center" role="alert">
+      <strong>Ducat validator is syncing</strong> &mdash;
+      {{ lag }} block{{ lag === 1 ? '' : 's' }} behind chain tip
+      ({{ height!.scanned_height | number }} / {{ height!.remote_height | number }}).
+      Vault data on recent transactions may be stale or missing until sync catches up.
+    </div>
+  </div>
+}

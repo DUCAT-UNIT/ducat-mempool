@@ -340,6 +340,20 @@
                   <div>
                     <app-address-labels [vout]="vout" [channel]="tx._channels && tx._channels.outputs[vindex] ? tx._channels.outputs[vindex] : null"></app-address-labels>
                   </div>
+                  @if (getDucatOutput(vindex); as ducatOut) {
+                    <div class="ducat-output-labels">
+                      <span class="badge" [ngClass]="{
+                        'bg-success': ducatOut.type === 'vault',
+                        'bg-primary': ducatOut.type === 'account',
+                        'bg-info': ducatOut.type === 'unit_mint' || ducatOut.type === 'ducat_mint',
+                        'bg-warning': ducatOut.type === 'op_return',
+                        'bg-secondary': ducatOut.type === 'other'
+                      }">{{ ducatOut.type === 'op_return' ? 'Vault Stone' : ducatOut.type === 'unit_mint' ? 'UNIT Mint' : ducatOut.type === 'ducat_mint' ? 'DUCAT Mint' : ducatOut.type | titlecase }}</span>
+                      @for (asset of ducatOut.assets; track asset.asset_id) {
+                        <span class="badge bg-info ms-1">{{ asset.amount + asset.reserve }} {{ asset.asset_id }}</span>
+                      }
+                    </div>
+                  }
                   <ng-template #scriptpubkey_type>
                     <ng-template [ngIf]="vout.pegout" [ngIfElse]="defaultscriptpubkey_type">
                       <ng-container i18n="transactions-list.peg-out-to">Peg-out to <ng-container *ngTemplateOutlet="pegOutLink"></ng-container></ng-container>

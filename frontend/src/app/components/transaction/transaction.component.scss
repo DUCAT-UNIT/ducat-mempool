@@ -325,3 +325,22 @@
     color: var(--info);
   }
 }
+
+.ducat-vault-banner {
+  border-left: 3px solid #f7931a;
+  margin-bottom: 1rem;
+
+  .badge {
+    font-size: 0.85em;
+    text-transform: capitalize;
+  }
+
+  table {
+    margin-bottom: 0;
+
+    td:first-child {
+      width: 160px;
+      color: #b0b0b0;
+    }
+  }
+}

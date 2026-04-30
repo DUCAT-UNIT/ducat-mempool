@@ -40,6 +40,8 @@ import { EnterpriseService } from '@app/services/enterprise.service';
 import { ZONE_SERVICE } from '@app/injection-tokens';
 import { MiningService, MiningStats } from '@app/services/mining.service';
 import { ETA, EtaService } from '@app/services/eta.service';
+import { DucatApiService } from '@app/services/ducat-api.service';
+import { DucatTxData } from '@interfaces/ducat.interface';
 
 export interface Pool {
   id: number;
@@ -118,6 +120,8 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
   auditStatus: TxAuditStatus | null;
   isAcceleration: boolean = false;
   accelerationCanceled: boolean = false;
+  ducatData: DucatTxData | null = null;
+  ducatSubscription: Subscription;
   filters: Filter[] = [];
   showCpfpDetails = false;
   miningStats: MiningStats;
@@ -214,6 +218,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
     private enterpriseService: EnterpriseService,
     private miningService: MiningService,
     private etaService: EtaService,
+    private ducatApiService: DucatApiService,
     private cd: ChangeDetectorRef,
     @Inject(ZONE_SERVICE) private zoneService: any,
   ) {}
@@ -694,6 +699,11 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
           }
           this.tx.feePerVsize = tx.fee / (tx.weight / 4);
           this.txChanged$.next(true);
+          this.ducatData = null;
+          this.ducatSubscription?.unsubscribe();
+          this.ducatSubscription = this.ducatApiService.getTxData$(tx.txid).subscribe((data) => {
+            this.ducatData = data;
+          });
           this.isLoadingTx = false;
           this.error = undefined;
           this.loadingCachedTx = false;
@@ -1243,6 +1253,7 @@ export class TransactionComponent implements OnInit, AfterViewInit, OnDestroy {
     this.auditSubscription?.unsubscribe();
     this.txConfirmedSubscription?.unsubscribe();
     this.currencyChangeSubscription?.unsubscribe();
+    this.ducatSubscription?.unsubscribe();
     this.leaveTransaction();
   }
 }

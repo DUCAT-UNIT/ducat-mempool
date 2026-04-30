@@ -3,6 +3,7 @@ import { StateService, SignaturesMode } from '@app/services/state.service';
 import { CacheService } from '@app/services/cache.service';
 import { Observable, ReplaySubject, BehaviorSubject, merge, Subscription, of, forkJoin } from 'rxjs';
 import { Outspend, Transaction, Vin, Vout } from '@interfaces/electrs.interface';
+import { DucatTxData, DucatTxOutput } from '@interfaces/ducat.interface';
 import { ElectrsApiService } from '@app/services/electrs-api.service';
 import { environment } from '@environments/environment';
 import { AssetsService } from '@app/services/assets.service';
@@ -46,6 +47,7 @@ export class TransactionsListComponent implements OnInit, OnChanges, OnDestroy {
   @Input() blockTime: number = 0; // Used for price calculation if all the transactions are in the same block
   @Input() txPreview = false;
   @Input() forceSignaturesMode: SignaturesMode = null;
+  @Input() ducatData: DucatTxData | null = null;
 
   @Output() loadMore = new EventEmitter();
 
@@ -587,6 +589,10 @@ export class TransactionsListComponent implements OnInit, OnChanges, OnDestroy {
       limit = tx.vout.length;
     }
     return limit;
+  }
+
+  getDucatOutput(vindex: number): DucatTxOutput | undefined {
+    return this.ducatData?.outputs?.find(o => o.vout === vindex);
   }
 
   toggleShowFullScript(vinIndex: number): void {

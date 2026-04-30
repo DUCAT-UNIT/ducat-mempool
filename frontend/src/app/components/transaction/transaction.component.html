@@ -46,6 +46,78 @@
     </div>
   }
 
+  @if (ducatData?.is_ducat) {
+    <div class="box ducat-vault-banner">
+      <div class="row">
+        <div class="col-sm">
+          <table class="table table-borderless table-striped">
+            <tbody>
+              <tr>
+                <td><strong>Ducat Action</strong></td>
+                <td><span class="badge" [ngClass]="{
+                  'bg-success': ducatData.action === 'open',
+                  'bg-primary': ducatData.action === 'deposit' || ducatData.action === 'borrow',
+                  'bg-warning': ducatData.action === 'withdraw' || ducatData.action === 'repay',
+                  'bg-danger': ducatData.action === 'repo' || ducatData.action === 'burned',
+                  'bg-info': ducatData.action === 'trim',
+                  'bg-secondary': !['open','deposit','borrow','withdraw','repay','repo','burned','trim'].includes(ducatData.action)
+                }">{{ ducatData.action }}</span></td>
+              </tr>
+              @if (ducatData.vault_id) {
+                <tr>
+                  <td>Vault ID</td>
+                  <td>
+                    <a [routerLink]="['/tx/' | relativeUrl, ducatData.vault_id]">
+                      <app-truncate [text]="ducatData.vault_id" [lastChars]="12"></app-truncate>
+                    </a>
+                  </td>
+                </tr>
+              }
+              @if (ducatData.vaults?.length) {
+                <tr>
+                  <td>Collateral</td>
+                  <td><app-amount [satoshis]="ducatData.vaults[0].vault_value"></app-amount></td>
+                </tr>
+                @if (ducatData.vaults[0].unit_balance > 0) {
+                  <tr>
+                    <td>UNIT Debt</td>
+                    <td>{{ ducatData.vaults[0].unit_balance / 100 | number:'1.2-2' }} UNIT</td>
+                  </tr>
+                }
+                @if (ducatData.vaults[0].vault_ratio) {
+                  <tr>
+                    <td>Collateral Ratio</td>
+                    <td>{{ ducatData.vaults[0].vault_ratio | number:'1.0-0' }}%</td>
+                  </tr>
+                }
+              }
+              @if (ducatData.vault_stone) {
+                <tr>
+                  <td>Vault Stone</td>
+                  <td>{{ ducatData.vault_stone.encumbered ? 'Encumbered' : 'Cleared' }}
+                    (v{{ ducatData.vault_stone.version }}, guardians: {{ ducatData.vault_stone.guardian_indices.join(', ') }})</td>
+                </tr>
+                @if (ducatData.vault_stone.base_price) {
+                  <tr>
+                    <td>Oracle Price</td>
+                    <td>${{ ducatData.vault_stone.base_price | number }} BTC/USD</td>
+                  </tr>
+                }
+                @if (ducatData.vault_stone.thold_price) {
+                  <tr>
+                    <td>Liquidation Price</td>
+                    <td>${{ ducatData.vault_stone.thold_price | number }} BTC/USD</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <br>
+  }
+
   @if (!error) {
     <app-transaction-details
       [network]="network"
@@ -185,7 +257,7 @@
     </div>
 
 
-    <app-transactions-list #txList [transactions]="[tx]" [cached]="isCached" [errorUnblinded]="errorUnblinded" [inputIndex]="inputIndex" [outputIndex]="outputIndex" [transactionPage]="true"></app-transactions-list>
+    <app-transactions-list #txList [transactions]="[tx]" [cached]="isCached" [errorUnblinded]="errorUnblinded" [inputIndex]="inputIndex" [outputIndex]="outputIndex" [transactionPage]="true" [ducatData]="ducatData"></app-transactions-list>
 
     <div class="title text-start">
       <h2 i18n="transaction.details|Transaction Details">Details</h2>
