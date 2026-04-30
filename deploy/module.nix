@@ -40,7 +40,11 @@ let
       API_URL_PREFIX = "/api/v1/";
       POLL_RATE_MS = 2000;
       CACHE_DIR = "${cfg.stateDir}/cache";
-      INDEXING_BLOCKS_AMOUNT = 0;
+      # -1 = unlimited; matches upstream production/mempool-config.signet.json.
+      # Required to enable Common.indexingEnabled() which gates the mining
+      # routes (/api/v1/mining/pool/...). Without it, the per-block pool
+      # logo URL on the homepage 404s.
+      INDEXING_BLOCKS_AMOUNT = -1;
       BLOCKS_SUMMARIES_INDEXING = false;
       AUDIT = false;
       # Set to false: the Nix deploy ships a stub rust-gbt module, the
