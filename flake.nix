@@ -151,14 +151,17 @@
       # ── NixOS module ───────────────────────────────────────────────
       # Importable into a colmena/nixos config; pre-wires the explorer
       # packages from this flake.
+      #
+      # Frontend/backend are pure-JS bundles (platform-independent files
+      # interpreted by node at runtime), so we always build the x86_64-linux
+      # derivation. Cross-referencing avoids an aarch64 npm install + ng
+      # build under qemu-user during deploy of arm64 hosts.
       nixosModules.ducat-mempool = { pkgs, lib, ... }: {
         imports = [ ./deploy/module.nix ];
 
         services.ducat-mempool = {
-          frontendPackage = lib.mkDefault
-            self.packages.${pkgs.stdenv.hostPlatform.system}.frontend;
-          backendPackage = lib.mkDefault
-            self.packages.${pkgs.stdenv.hostPlatform.system}.backend;
+          frontendPackage = lib.mkDefault self.packages.x86_64-linux.frontend;
+          backendPackage  = lib.mkDefault self.packages.x86_64-linux.backend;
         };
       };
     };
