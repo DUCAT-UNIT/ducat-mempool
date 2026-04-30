@@ -69,6 +69,18 @@ if (configContent && configContent.BASE_MODULE === 'liquid') {
 
 PROXY_CONFIG.push(...[
   {
+    // Ducat validator REST API. The frontend hits /ducat-api/api/...
+    // which the dev proxy forwards to the local validator on :4000.
+    context: ['/ducat-api/**'],
+    target: 'http://127.0.0.1:4000',
+    secure: false,
+    changeOrigin: true,
+    proxyTimeout: 30000,
+    pathRewrite: {
+        '^/ducat-api': ''
+    },
+  },
+  {
     context: ['/testnet/api/v1/lightning/**'],
     target: `http://localhost:8999`,
     secure: false,

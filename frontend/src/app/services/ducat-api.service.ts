@@ -15,7 +15,10 @@ import {
   providedIn: 'root'
 })
 export class DucatApiService {
-  private apiBaseUrl = 'http://localhost:4000';
+  // Relative path: nginx (or the Angular dev proxy) routes /ducat-api/* to
+  // the Ducat validator's REST API. Strips the cross-origin browser request
+  // we'd otherwise have against http://localhost:4000.
+  private apiBaseUrl = '/ducat-api';
   // Proto profile changes only when the anchor contract is republished
   // (rare). Cache for the lifetime of the service, refreshable on demand.
   private protoCache$?: Observable<DucatProtoProfile | null>;

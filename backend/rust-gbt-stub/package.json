@@ -1,0 +1,8 @@
+{
+  "name": "rust-gbt",
+  "version": "0.0.0-stub",
+  "description": "No-op stub of the rust-gbt NAPI binding. Used by the Nix deploy build so npm install doesn't have to compile the Rust addon. Every symbol it exports throws on use, so MEMPOOL.RUST_GBT must be false in the backend config — the TypeScript code paths that hit these classes are gated on that flag.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT"
+}
