@@ -463,16 +463,35 @@ class ElectrsApi implements AbstractBitcoinApi {
     return this.failoverRouter.$get<IEsploraApi.Transaction>('/tx/' + txId);
   }
 
+  // Public esplora has no /internal/... endpoints, so we fan out to /tx/<id>
+  // for the few callsites that need them. Cheap on a small chain like
+  // Mutinynet; on mainnet you'd want a real /internal-capable indexer.
   async $getRawTransactions(txids: string[]): Promise<IEsploraApi.Transaction[]> {
-    return this.failoverRouter.$post<IEsploraApi.Transaction[]>('/internal/txs', txids, 'json');
+    const results = await Promise.allSettled(txids.map((txid) => this.$getRawTransaction(txid)));
+    return results
+      .filter((r): r is PromiseFulfilledResult<IEsploraApi.Transaction> => r.status === 'fulfilled')
+      .map((r) => r.value);
   }
 
   async $getMempoolTransactions(txids: string[]): Promise<IEsploraApi.Transaction[]> {
-    return this.failoverRouter.$post<IEsploraApi.Transaction[]>('/internal/mempool/txs', txids, 'json');
+    // Same shape as $getRawTransactions; mempool semantics are enforced by
+    // the caller filtering on tx.status.confirmed.
+    return this.$getRawTransactions(txids);
   }
 
   async $getAllMempoolTransactions(lastSeenTxid?: string, max_txs?: number): Promise<IEsploraApi.Transaction[]> {
-    return this.failoverRouter.$get<IEsploraApi.Transaction[]>('/internal/mempool/txs' + (lastSeenTxid ? '/' + lastSeenTxid : ''), 'json', max_txs ? { max_txs } : null);
+    // Public esplora exposes /mempool/txids which returns the entire
+    // mempool's txid list; we then fetch each tx individually.
+    const allTxids = await this.failoverRouter.$get<string[]>('/mempool/txids');
+    let cursor = allTxids;
+    if (lastSeenTxid) {
+      const idx = allTxids.indexOf(lastSeenTxid);
+      cursor = idx >= 0 ? allTxids.slice(idx + 1) : allTxids;
+    }
+    if (max_txs && cursor.length > max_txs) {
+      cursor = cursor.slice(0, max_txs);
+    }
+    return this.$getRawTransactions(cursor);
   }
 
   $getTransactionHex(txId: string): Promise<string> {
@@ -511,8 +530,10 @@ class ElectrsApi implements AbstractBitcoinApi {
   /** @asyncUnsafe */
   async $getTxsForBlock(hash: string, fallbackToCore = false): Promise<IEsploraApi.Transaction[]> {
     try {
-      const txs = await this.failoverRouter.$get<IEsploraApi.Transaction[]>('/internal/block/' + hash + '/txs');
-      return txs;
+      // /internal/block/<hash>/txs is missing on public esplora; fan out via
+      // the per-block txids endpoint plus per-tx fetches.
+      const txids = await this.$getTxIdsForBlock(hash, fallbackToCore);
+      return this.$getRawTransactions(txids);
     } catch (e) {
       if (fallbackToCore && isAxiosError(e) && e.response?.status === 404) {
         // might be a stale block, see if Core has it?
@@ -591,7 +612,10 @@ class ElectrsApi implements AbstractBitcoinApi {
   }
 
   async $getBatchedOutspends(txids: string[]): Promise<IEsploraApi.Outspend[][]> {
-    throw new Error('Method not implemented.');
+    // Public esplora has no batch endpoint, so fan out to /tx/<id>/outspends.
+    // Used by the explorer's per-tx output arrows; batches are capped at 50
+    // upstream so this stays bounded.
+    return Promise.all(txids.map((txid) => this.$getOutspends(txid)));
   }
 
   async $getBatchedOutspendsInternal(txids: string[]): Promise<IEsploraApi.Outspend[][]> {
@@ -599,7 +623,7 @@ class ElectrsApi implements AbstractBitcoinApi {
   }
 
   async $getOutSpendsByOutpoint(outpoints: { txid: string, vout: number }[]): Promise<IEsploraApi.Outspend[]> {
-    return this.failoverRouter.$post<IEsploraApi.Outspend[]>('/internal/txs/outspends/by-outpoint', outpoints.map(out => `${out.txid}:${out.vout}`), 'json');
+    return Promise.all(outpoints.map((o) => this.$getOutspend(o.txid, o.vout)));
   }
 
   /** @asyncUnsafe */

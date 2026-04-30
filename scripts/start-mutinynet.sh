@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 #
 # start-mutinynet.sh — boot the Ducat block explorer locally against an
-# already-running Mutinynet stack (Bitcoin Core + Electrs + Ducat validator).
+# already-running Mutinynet stack (Bitcoin Core + an indexer + Ducat validator).
 #
 # Expected services (defaults are the deploy/mutiny NixOS module values):
 #   - Bitcoin Core RPC at 127.0.0.1:${BITCOIN_RPC_PORT} (user/pass below)
-#   - Electrs (plain RPC, no TLS) at 127.0.0.1:${ELECTRUM_PORT}
+#   - One of:
+#       * Esplora (Blockstream electrs) at 127.0.0.1:${ESPLORA_PORT}    (default)
+#       * Electrs (Electrum protocol)   at 127.0.0.1:${ELECTRUM_PORT}   (MEMPOOL_BACKEND=electrum)
 #   - Ducat validator HTTP API at 127.0.0.1:${VALIDATOR_PORT}
+#
+# Why default to esplora: it indexes spending-tx-by-outpoint, so per-output
+# red-arrow links (forward navigation through the tx graph) work. The
+# electrum backend can only report spent/unspent.
 #
 # What it does:
 #   - Spins up an embedded MariaDB inside ./.local-mutinynet/ (Unix socket only,
@@ -50,9 +56,17 @@ BITCOIN_RPC_USER="${BITCOIN_RPC_USER:-user}"
 BITCOIN_RPC_PASS="${BITCOIN_RPC_PASS:-Shiengoojiraihooh3Va}"
 ELECTRUM_HOST="${ELECTRUM_HOST:-127.0.0.1}"
 ELECTRUM_PORT="${ELECTRUM_PORT:-50001}"
+ESPLORA_HOST="${ESPLORA_HOST:-127.0.0.1}"
+ESPLORA_PORT="${ESPLORA_PORT:-3000}"
+MEMPOOL_BACKEND="${MEMPOOL_BACKEND:-esplora}"   # esplora | electrum
 VALIDATOR_PORT="${VALIDATOR_PORT:-4000}"
 BACKEND_PORT="${BACKEND_PORT:-8999}"
 FRONTEND_PORT="${FRONTEND_PORT:-4200}"
+
+case "${MEMPOOL_BACKEND}" in
+  esplora|electrum) ;;
+  *) printf '\033[0;31merror:\033[0m MEMPOOL_BACKEND must be "esplora" or "electrum" (got: %s)\n' "${MEMPOOL_BACKEND}" >&2; exit 1 ;;
+esac
 
 cyan()  { printf '\033[0;36m%s\033[0m\n' "$*"; }
 green() { printf '\033[0;32m%s\033[0m\n' "$*"; }
@@ -81,10 +95,18 @@ if ! curl -fsS --max-time 2 -u "${BITCOIN_RPC_USER}:${BITCOIN_RPC_PASS}" \
 else
   green  "  ✓ Bitcoin Core RPC ${BITCOIN_RPC_HOST}:${BITCOIN_RPC_PORT}"
 fi
-if ! (echo > "/dev/tcp/${ELECTRUM_HOST}/${ELECTRUM_PORT}") 2>/dev/null; then
-  yellow "  ! Electrs at ${ELECTRUM_HOST}:${ELECTRUM_PORT} unreachable (continuing)"
+if [ "${MEMPOOL_BACKEND}" = "esplora" ]; then
+  if ! curl -fsS --max-time 2 "http://${ESPLORA_HOST}:${ESPLORA_PORT}/blocks/tip/height" >/dev/null; then
+    yellow "  ! Esplora at ${ESPLORA_HOST}:${ESPLORA_PORT} unreachable (continuing)"
+  else
+    green  "  ✓ Esplora ${ESPLORA_HOST}:${ESPLORA_PORT}"
+  fi
 else
-  green  "  ✓ Electrs ${ELECTRUM_HOST}:${ELECTRUM_PORT}"
+  if ! (echo > "/dev/tcp/${ELECTRUM_HOST}/${ELECTRUM_PORT}") 2>/dev/null; then
+    yellow "  ! Electrs at ${ELECTRUM_HOST}:${ELECTRUM_PORT} unreachable (continuing)"
+  else
+    green  "  ✓ Electrs ${ELECTRUM_HOST}:${ELECTRUM_PORT}"
+  fi
 fi
 if ! curl -fsS --max-time 2 "http://127.0.0.1:${VALIDATOR_PORT}/api/height" >/dev/null; then
   yellow "  ! Ducat validator at 127.0.0.1:${VALIDATOR_PORT} unreachable (the explorer will run, but Ducat overlays will be empty)"
@@ -138,7 +160,7 @@ cat > "${REPO_ROOT}/backend/mempool-config.json" <<JSON
 {
   "MEMPOOL": {
     "NETWORK": "signet",
-    "BACKEND": "electrum",
+    "BACKEND": "${MEMPOOL_BACKEND}",
     "HTTP_PORT": ${BACKEND_PORT},
     "SPAWN_CLUSTER_PROCS": 0,
     "API_URL_PREFIX": "/api/v1/",
@@ -163,6 +185,11 @@ cat > "${REPO_ROOT}/backend/mempool-config.json" <<JSON
     "HOST": "${ELECTRUM_HOST}",
     "PORT": ${ELECTRUM_PORT},
     "TLS_ENABLED": false
+  },
+  "ESPLORA": {
+    "REST_API_URL": "http://${ESPLORA_HOST}:${ESPLORA_PORT}",
+    "UNIX_SOCKET_PATH": null,
+    "FALLBACK": []
   },
   "DATABASE": {
     "ENABLED": true,

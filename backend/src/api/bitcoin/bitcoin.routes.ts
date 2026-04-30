@@ -69,7 +69,13 @@ class BitcoinRoutes {
       .get(config.MEMPOOL.API_URL_PREFIX + 'internal/blocks/:definitionHash', this.getBlocksByDefinitionHash)
       ;
 
-      if (config.MEMPOOL.BACKEND !== 'esplora') {
+      // Upstream gates these routes on `BACKEND !== 'esplora'` because their
+      // production deployment relies on nginx proxying the basic Bitcoin
+      // paths directly to esplora's REST API. The local Mutinynet dev setup
+      // has no such nginx, so we always register the routes — the esplora-
+      // mode methods on EsploraApi are wired up to fall back to per-tx
+      // fetches where esplora's /internal/... endpoints aren't available.
+      {
         app
           .get(config.MEMPOOL.API_URL_PREFIX + 'mempool', this.getMempool)
           .get(config.MEMPOOL.API_URL_PREFIX + 'mempool/txids', this.getMempoolTxIds)

@@ -6,19 +6,28 @@ describes how to run the explorer locally against a Mutinynet stack.
 
 ## Prerequisites
 
-You need three Mutinynet services already running on `localhost`:
+You need these Mutinynet services running on `localhost`:
 
-| Service          | Default port | Provided by                                      |
-| ---------------- | ------------ | ------------------------------------------------ |
-| Bitcoin Core RPC | `19443`      | `services.electrs-mutinynet` in validator-rs     |
-| Electrs (plain)  | `50001`      | `services.electrs-mutinynet` in validator-rs     |
-| Ducat validator  | `4000`       | `services.ducat-mutinynet` in validator-rs       |
+| Service             | Default port | Provided by                                      |
+| ------------------- | ------------ | ------------------------------------------------ |
+| Bitcoin Core RPC    | `19443`      | `services.bitcoind-mutinynet` in validator-rs    |
+| Esplora (REST)      | `3000`       | `services.esplora-mutinynet` in validator-rs     |
+| Electrs (Electrum)  | `50001`      | `services.electrs-mutinynet` (alternative)       |
+| Ducat validator     | `4000`       | `services.ducat-mutinynet` in validator-rs       |
+
+The script defaults to the **Esplora** backend (`MEMPOOL_BACKEND=esplora`)
+because it indexes spending-tx-by-outpoint, which lights up the per-output
+red-arrow links so you can navigate forward through the transaction graph.
+The Electrum backend can only report spent/unspent.
+
+Either Esplora *or* Electrs is enough — you don't need both. Both NixOS
+modules share the same `services.bitcoind-mutinynet` Bitcoin Core node, so
+they coexist if you want to keep them both around.
 
 The validator-rs repo exposes the NixOS module `services.ducat-mutinynet` at
-`deploy/mutiny/`, which wires up all three with a single
-`services.ducat-mutinynet.enable = true;`. The defaults (RPC user `user`,
-password `Shiengoojiraihooh3Va`, ports above) are what `start-mutinynet.sh`
-expects out of the box.
+`deploy/mutiny/`, which imports all of the above. The defaults (RPC user
+`user`, password `Shiengoojiraihooh3Va`, ports above) are what
+`start-mutinynet.sh` expects out of the box.
 
 You also need:
 
@@ -80,11 +89,20 @@ Recognized variables:
 | `BITCOIN_RPC_PORT`   | `19443`                    |
 | `BITCOIN_RPC_USER`   | `user`                     |
 | `BITCOIN_RPC_PASS`   | `Shiengoojiraihooh3Va`     |
+| `MEMPOOL_BACKEND`    | `esplora` (or `electrum`)  |
+| `ESPLORA_HOST`       | `127.0.0.1`                |
+| `ESPLORA_PORT`       | `3000`                     |
 | `ELECTRUM_HOST`      | `127.0.0.1`                |
 | `ELECTRUM_PORT`      | `50001`                    |
 | `VALIDATOR_PORT`     | `4000`                     |
 | `BACKEND_PORT`       | `8999`                     |
 | `FRONTEND_PORT`      | `4200`                     |
+
+To switch to the Electrum backend (e.g. if Esplora is still indexing):
+
+```bash
+MEMPOOL_BACKEND=electrum nix run .#start-mutinynet
+```
 
 ## State and logs
 
