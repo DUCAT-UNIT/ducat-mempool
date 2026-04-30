@@ -27,6 +27,7 @@ import { MempoolBlockComponent } from '@components/mempool-block/mempool-block.c
 import { PoolRankingComponent } from '@components/pool-ranking/pool-ranking.component';
 import { PoolComponent } from '@components/pool/pool.component';
 import { DashboardComponent } from '@app/dashboard/dashboard.component';
+import { DucatStatsCardComponent } from '@app/dashboard/ducat-stats-card/ducat-stats-card.component';
 import { CustomDashboardComponent } from '@components/custom-dashboard/custom-dashboard.component';
 import { MiningDashboardComponent } from '@components/mining-dashboard/mining-dashboard.component';
 import { AcceleratorDashboardComponent } from '@components/acceleration/accelerator-dashboard/accelerator-dashboard.component';
@@ -52,6 +53,7 @@ import { AsmStylerPipe } from '@app/shared/pipes/asm-styler/asm-styler.pipe';
 @NgModule({
   declarations: [
     DashboardComponent,
+    DucatStatsCardComponent,
     CustomDashboardComponent,
     MempoolBlockComponent,
     AddressComponent,

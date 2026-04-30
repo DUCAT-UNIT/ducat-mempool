@@ -4,6 +4,24 @@ export interface DucatHeightInfo {
   synced: boolean;
 }
 
+export interface DucatStatsVolume {
+  btc_volume: number;     // sats (cumulative or scoped)
+  unit_volume: number;    // cents (cumulative or scoped)
+  btc_locked: number;     // sats (current snapshot)
+  unit_borrowed: number;  // cents (current snapshot)
+  vaults: number;         // active vault count (current snapshot)
+  height: number;
+  state_hash: string;
+}
+
+export interface DucatPriceLatest {
+  base_price: number;     // USD per BTC
+  base_stamp: number;
+  thold_price: number;
+  contract_id: string;
+  block_height: number;
+}
+
 export interface DucatTxData {
   is_ducat: boolean;
   action?: string;

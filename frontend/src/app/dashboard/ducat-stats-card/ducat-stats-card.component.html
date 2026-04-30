@@ -1,0 +1,53 @@
+<div class="ducat-stats-card">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Ducat Protocol</h2>
+      @if (total) {
+        <span class="height-badge">@ block {{ total.height | number }}</span>
+      }
+    </div>
+    <div class="card-body">
+      @if (!loaded) {
+        <div class="loading">Loading…</div>
+      } @else if (!reachable) {
+        <div class="unreachable">Validator unreachable at <code>localhost:4000</code></div>
+      } @else {
+        <div class="row stat-row">
+          <div class="col stat">
+            <div class="stat-label">Active vaults</div>
+            <div class="stat-value">{{ total!.vaults | number }}</div>
+          </div>
+          <div class="col stat">
+            <div class="stat-label">BTC locked</div>
+            <div class="stat-value">{{ (total!.btc_locked / 1e8) | number:'1.2-4' }}<small> BTC</small></div>
+          </div>
+          <div class="col stat">
+            <div class="stat-label">UNIT debt</div>
+            <div class="stat-value">{{ unitFromCents(total!.unit_borrowed) | number:'1.0-2' }}<small> UNIT</small></div>
+          </div>
+          <div class="col stat">
+            <div class="stat-label">BTC / USD</div>
+            <div class="stat-value">
+              @if (price) {
+                ${{ price.base_price | number }}
+              } @else {
+                <span class="muted">—</span>
+              }
+            </div>
+          </div>
+          <div class="col stat">
+            <div class="stat-label">Volume (24h)</div>
+            <div class="stat-value">
+              @if (day) {
+                {{ (day.btc_volume / 1e8) | number:'1.2-4' }}<small> BTC</small>
+                <div class="stat-sub">{{ unitFromCents(day.unit_volume) | number:'1.0-0' }} UNIT</div>
+              } @else {
+                <span class="muted">—</span>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
