@@ -68,8 +68,10 @@ let
       PORT = 3306;
       SOCKET = "/run/mysqld/mysqld.sock";
       DATABASE = "mempool";
-      USERNAME = "mempool";
-      PASSWORD = "mempool";
+      # Must match the systemd user — MariaDB's unix_socket plugin checks
+      # the OS uid against the SQL username before accepting the connect.
+      USERNAME = "ducat-mempool";
+      PASSWORD = "";
       # Backend writes a pidlock to PID_DIR/mempool-<dbname>.pid; falls
       # back to __dirname (inside the read-only nix store) if unset.
       PID_DIR = cfg.stateDir;
@@ -144,20 +146,18 @@ in {
 
   config = mkIf cfg.enable {
     # ── MariaDB ───────────────────────────────────────────────────────
+    # ensureUsers grants unix_socket auth, which matches the OS user to
+    # the SQL user name. Use "ducat-mempool" for both so the backend's
+    # socket connect succeeds without a password.
     services.mysql = {
       enable = mkDefault true;
       package = mkDefault pkgs.mariadb;
       ensureDatabases = [ "mempool" ];
       ensureUsers = [{
-        name = "mempool";
+        name = "ducat-mempool";
         ensurePermissions = { "mempool.*" = "ALL PRIVILEGES"; };
       }];
     };
-
-    # NixOS' MariaDB module enforces socket-auth for ensureUsers; the
-    # backend connects via socket too (see the SOCKET key in configFile),
-    # so password isn't actually checked. We still set one in config for
-    # completeness so a host:port fallback would work too.
 
     # ── Backend systemd service ───────────────────────────────────────
     systemd.services.ducat-mempool = {
