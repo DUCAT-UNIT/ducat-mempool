@@ -45,6 +45,18 @@
     .col-action { width: 100px; }
     .col-num    { width: 110px; font-variant-numeric: tabular-nums; }
     .col-ratio  { width: 80px; font-variant-numeric: tabular-nums; }
+
+    .id-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+
+      app-clipboard {
+        line-height: 0;
+      }
+    }
   }
 
   .muted {

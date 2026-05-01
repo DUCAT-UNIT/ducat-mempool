@@ -32,7 +32,7 @@ export class DucatRecentVaultsComponent implements OnInit, OnDestroy {
       .subscribe((resp) => {
         this.loaded = true;
         this.reachable = resp !== null;
-        this.items = resp?.data ?? [];
+        this.items = (resp?.data ?? []).slice().sort((a, b) => b.block_time - a.block_time);
         this.cd.markForCheck();
       });
   }
