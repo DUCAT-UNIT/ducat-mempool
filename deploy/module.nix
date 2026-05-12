@@ -6,15 +6,18 @@
 #   - Backend systemd service (Node.js, talks to Bitcoin Core RPC and
 #     Esplora for block/tx data, exposes /api/v1/* on $backendPort)
 #   - Nginx vhost serving the static frontend and proxying:
-#       /              → static frontend bundle
-#       /api/v1/*      → backend
-#       /api/*         → backend (rewritten to /api/v1/*); the backend is a
-#                        superset of the esplora REST API and adds routes
-#                        the upstream Blockstream electrs lacks — most
-#                        importantly `txs/outspends` (batched), which the
-#                        frontend's transactions-list relies on for the
-#                        green/grey "spent" icons.
-#       /ducat-api/*   → Ducat validator (vault data, rune registry)
+#       /                      → static frontend bundle
+#       /api/v1/*              → backend
+#       /api/txs/outspends     → backend (rewritten to /api/v1/...) — the
+#                                batched-outspends route the frontend's
+#                                transactions-list uses for the green/grey
+#                                "spent" icons. Blockstream electrs 0.4.x
+#                                doesn't expose the batch path; the backend
+#                                fans it out to N per-tx esplora calls.
+#       /api/*                 → Esplora (everything else: single tx/block
+#                                lookups, /block/:hash/txid/:index used by
+#                                the runestone decoder, address lookups…)
+#       /ducat-api/*           → Ducat validator (vault data, rune registry)
 #
 # Used both for the bundled cloud deploy and for ad-hoc setups by
 # importing this file and providing the package paths.
@@ -227,18 +230,29 @@ in {
           proxyWebsockets = true;
         };
 
-        # Esplora-compatible endpoints — route through the mempool backend
-        # rather than directly to Blockstream electrs. The backend speaks
-        # the same REST surface but adds the batched `txs/outspends` route
-        # that the frontend uses to populate "spent by" icons in the
-        # transactions list; Blockstream electrs 0.4.x has only the
-        # per-tx variants and 404s on the batch path, leaving every icon
-        # grey. Mirrors the local-dev proxy.conf rule
-        # ({context: '/api/**', pathRewrite: '^/api/' → '/api/v1/'}).
-        locations."/api/" = {
+        # Surgical override: only the batched-outspends call goes through
+        # the mempool backend (which fans out to N per-tx esplora calls).
+        # Blockstream electrs 0.4.x has /tx/:id/outspend(s) but not the
+        # plural /txs/outspends, and the frontend's transactions-list
+        # relies on it for the green/grey "spent" icons. Exact-match
+        # `=` so it wins over the general `/api/` prefix that follows.
+        locations."= /api/txs/outspends" = {
           proxyPass = "http://127.0.0.1:${toString cfg.backendPort}";
           extraConfig = ''
             rewrite ^/api/(.*) /api/v1/$1 break;
+          '';
+        };
+
+        # Everything else under /api/ → Esplora. The mempool backend is a
+        # near-superset of the esplora REST API but misses a few esplora-
+        # only routes (notably /block/:hash/txid/:index, used by the
+        # runestone decoder to look up rune etchings by ID). Sending the
+        # general traffic to esplora keeps those working; the override
+        # above handles the one path esplora itself can't answer.
+        locations."/api/" = {
+          proxyPass = "${cfg.esploraRestUrl}";
+          extraConfig = ''
+            rewrite ^/api/(.*) /$1 break;
           '';
         };
 
