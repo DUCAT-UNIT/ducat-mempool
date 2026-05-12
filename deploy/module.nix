@@ -8,7 +8,12 @@
 #   - Nginx vhost serving the static frontend and proxying:
 #       /              → static frontend bundle
 #       /api/v1/*      → backend
-#       /api/*         → Esplora (for spending-tx-by-outpoint links)
+#       /api/*         → backend (rewritten to /api/v1/*); the backend is a
+#                        superset of the esplora REST API and adds routes
+#                        the upstream Blockstream electrs lacks — most
+#                        importantly `txs/outspends` (batched), which the
+#                        frontend's transactions-list relies on for the
+#                        green/grey "spent" icons.
 #       /ducat-api/*   → Ducat validator (vault data, rune registry)
 #
 # Used both for the bundled cloud deploy and for ad-hoc setups by
@@ -222,11 +227,18 @@ in {
           proxyWebsockets = true;
         };
 
-        # Esplora — strip /api/ prefix to match esplora's routing.
+        # Esplora-compatible endpoints — route through the mempool backend
+        # rather than directly to Blockstream electrs. The backend speaks
+        # the same REST surface but adds the batched `txs/outspends` route
+        # that the frontend uses to populate "spent by" icons in the
+        # transactions list; Blockstream electrs 0.4.x has only the
+        # per-tx variants and 404s on the batch path, leaving every icon
+        # grey. Mirrors the local-dev proxy.conf rule
+        # ({context: '/api/**', pathRewrite: '^/api/' → '/api/v1/'}).
         locations."/api/" = {
-          proxyPass = "${cfg.esploraRestUrl}";
+          proxyPass = "http://127.0.0.1:${toString cfg.backendPort}";
           extraConfig = ''
-            rewrite ^/api/(.*) /$1 break;
+            rewrite ^/api/(.*) /api/v1/$1 break;
           '';
         };
 
