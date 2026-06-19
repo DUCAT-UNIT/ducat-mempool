@@ -37,9 +37,14 @@ with lib;
 let
   cfg = config.services.ducat-mempool;
 
-  # Backend's mempool-config.json. Generated at activation time so the
-  # secret-ish RPC password lives only in the systemd service env.
-  configFile = pkgs.writeText "ducat-mempool-config.json" (builtins.toJSON {
+  # Backend's mempool-config.json as a function of the RPC password, so we can
+  # render two variants: the literal password baked into the store (default),
+  # or a placeholder template that ExecStartPre fills from `passwordFile` at
+  # runtime - keeping the real secret out of the world-readable Nix store.
+  useFile = cfg.bitcoindRpc.passwordFile != null;
+  rpcPasswordPlaceholder = "@DUCAT_RPC_PASSWORD@";
+
+  mkConfigJson = rpcPassword: builtins.toJSON {
     MEMPOOL = {
       NETWORK = cfg.network;
       BACKEND = "esplora";
@@ -66,7 +71,7 @@ let
       HOST = cfg.bitcoindRpc.host;
       PORT = cfg.bitcoindRpc.port;
       USERNAME = cfg.bitcoindRpc.user;
-      PASSWORD = cfg.bitcoindRpc.password;
+      PASSWORD = rpcPassword;
       TIMEOUT = 60000;
     };
     ESPLORA = {
@@ -91,7 +96,28 @@ let
     SYSLOG = { ENABLED = false; };
     STATISTICS = { ENABLED = true; };
     FIAT_PRICE = { ENABLED = false; };
-  });
+  };
+
+  # No passwordFile: bake the (public-default or caller-supplied) password in.
+  configFileStore = pkgs.writeText "ducat-mempool-config.json"
+    (mkConfigJson cfg.bitcoindRpc.password);
+
+  # passwordFile mode: a store template carrying only a placeholder, plus a
+  # render step that injects the real password into a tmpfs copy under /run.
+  configTemplate = pkgs.writeText "ducat-mempool-config.template.json"
+    (mkConfigJson rpcPasswordPlaceholder);
+
+  runtimeConfig = "/run/ducat-mempool/mempool-config.json";
+
+  # Runs as the service user at every start; jq --rawfile keeps the secret out
+  # of argv, and gsub trims any trailing newline the secret file may carry.
+  renderConfig = pkgs.writeShellScript "ducat-mempool-render-config" ''
+    set -euo pipefail
+    umask 077
+    ${pkgs.jq}/bin/jq --rawfile pw ${cfg.bitcoindRpc.passwordFile} \
+      '.CORE_RPC.PASSWORD = ($pw | gsub("\\s+$"; ""))' \
+      ${configTemplate} > ${runtimeConfig}
+  '';
 in {
   options.services.ducat-mempool = {
     enable = mkEnableOption "Ducat block explorer (mempool.space fork)";
@@ -128,7 +154,20 @@ in {
       host = mkOption { type = types.str; default = "127.0.0.1"; };
       port = mkOption { type = types.port; default = 19443; };
       user = mkOption { type = types.str; default = "user"; };
-      password = mkOption { type = types.str; default = "Shiengoojiraihooh3Va"; };
+      password = mkOption {
+        type = types.str;
+        default = "Shiengoojiraihooh3Va";
+        description = "RPC password baked into the store config. Ignored when passwordFile is set.";
+      };
+      passwordFile = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''
+          Path to a file holding the bitcoind RPC password, read at service
+          start. Takes precedence over `password`. The service user must be
+          able to read this file (e.g. via a shared group).
+        '';
+      };
     };
 
     esploraRestUrl = mkOption {
@@ -180,15 +219,19 @@ in {
       wantedBy = [ "multi-user.target" ];
 
       environment = {
-        MEMPOOL_CONFIG_FILE = "${configFile}";
+        MEMPOOL_CONFIG_FILE = if useFile then runtimeConfig else "${configFileStore}";
       };
 
       serviceConfig = {
+        # When passwordFile is set, render the config (with the secret injected).
+        ExecStartPre = lib.optional useFile renderConfig;
         ExecStart = "${pkgs.nodejs_22}/bin/node --max-old-space-size=2048 ${cfg.backendPackage}/dist/index.js";
         Restart = "on-failure";
         RestartSec = 10;
         StateDirectory = "ducat-mempool";
         StateDirectoryMode = "0750";
+        RuntimeDirectory = "ducat-mempool";
+        RuntimeDirectoryMode = "0700";
         DynamicUser = false;
         User = "ducat-mempool";
         Group = "ducat-mempool";
