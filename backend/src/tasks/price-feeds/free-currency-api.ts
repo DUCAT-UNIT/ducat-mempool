@@ -56,9 +56,15 @@ class FreeCurrencyApi implements ConversionFeed {
 
   constructor() { }
 
+  private getHeaders(): Record<string, string> {
+    return {
+      'apikey': this.API_KEY
+    };
+  }
+
   /** @asyncUnsafe */
   public async $getQuota(): Promise<any> {
-    const response = await query(`${this.API_URL_PREFIX}status?apikey=${this.API_KEY}`);
+    const response = await query(`${this.API_URL_PREFIX}status`, false, this.getHeaders());
     if (response && response['quotas']) {
       return response['quotas'];
     }
@@ -67,7 +73,7 @@ class FreeCurrencyApi implements ConversionFeed {
 
   /** @asyncUnsafe */
   public async $fetchLatestConversionRates(): Promise<ConversionRates> {
-    const response = await query(`${this.API_URL_PREFIX}latest?apikey=${this.API_KEY}`);
+    const response = await query(`${this.API_URL_PREFIX}latest`, false, this.getHeaders());
     if (response && response['data']) {
       if (this.PAID) {
         response['data'] = this.convertData(response['data']);
@@ -79,7 +85,7 @@ class FreeCurrencyApi implements ConversionFeed {
 
   /** @asyncUnsafe */
   public async $fetchConversionRates(date: string): Promise<ConversionRates> {
-    const response = await query(`${this.API_URL_PREFIX}historical?date=${date}&apikey=${this.API_KEY}`, true);
+    const response = await query(`${this.API_URL_PREFIX}historical?date=${date}`, true, this.getHeaders());
     if (response && response['data'] && (response['data'][date] || this.PAID)) {
       if (this.PAID) {
         response['data'] = this.convertData(response['data']);
