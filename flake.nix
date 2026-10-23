@@ -3,14 +3,16 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    security-nixpkgs.url = "github:NixOS/nixpkgs/da6dc0e7b26060f2f71ce3ef7088fb56ee44fa36";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, security-nixpkgs, flake-utils }:
     (flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        nodejs = pkgs.nodejs_22;
+        securityPkgs = import security-nixpkgs { inherit system; };
+        nodejs = securityPkgs.nodejs_22;
         # Backend deps: rust toolchain + a wrapped C compiler (cargo's NAPI build
         # links via `cc`), mariadb, openssl/pkg-config for native node modules.
         runtimeDeps = [
@@ -46,7 +48,7 @@
         # ── Frontend bundle ────────────────────────────────────────────
         # Static Angular build. nginx serves this directly under the
         # explorer vhost.
-        packages.frontend = pkgs.buildNpmPackage {
+        packages.frontend = securityPkgs.buildNpmPackage {
           pname = "ducat-mempool-frontend";
           version = "3.4-dev";
           src = ./frontend;
@@ -56,7 +58,7 @@
           # Pin to the lockfile's vendored deps. Recompute by setting to
           # lib.fakeHash and rebuilding when frontend/package-lock.json
           # changes.
-          npmDepsHash = "sha256-jvlGqXWIzqnZgvA0rgQ8hc4+ewtlMerVSeKv21Qhgnw=";
+          npmDepsHash = "sha256-rHCqRi6kwmPvbB+ni8245exvBsTO10IX04aHdV6FiiM=";
 
           # Cypress installer downloads its binary at install time —
           # bypass it; we don't run e2e tests during the deploy build.
@@ -88,14 +90,14 @@
         # Compiled TypeScript dist + node_modules. We swap in a stub for
         # `rust-gbt` (a NAPI Rust addon) and rely on the JS fallback path
         # at runtime — set MEMPOOL.RUST_GBT=false in the backend config.
-        packages.backend = pkgs.buildNpmPackage {
+        packages.backend = securityPkgs.buildNpmPackage {
           pname = "ducat-mempool-backend";
           version = "3.4-dev";
           src = ./backend;
 
           nodejs = nodejs;
 
-          npmDepsHash = "sha256-yzSmJbK2IqBtwaWItPsQpYKRDDiiDc9MImi4pQv8QM8=";
+          npmDepsHash = "sha256-NvJnHdvPCh/OxaY0iEuciF5Q2wEmICu2Z4HKsAGO7iM=";
 
           # Skip backend/preinstall (which tries to build the Rust NAPI)
           # and any other lifecycle hooks. We provide rust-gbt as a stub.
@@ -167,6 +169,7 @@
         services.ducat-mempool = {
           frontendPackage = lib.mkDefault self.packages.x86_64-linux.frontend;
           backendPackage  = lib.mkDefault self.packages.x86_64-linux.backend;
+          nodePackage = lib.mkDefault security-nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.nodejs_22;
         };
       };
     };

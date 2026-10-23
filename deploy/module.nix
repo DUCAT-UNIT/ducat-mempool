@@ -138,6 +138,12 @@ in {
       description = "Pre-built backend bundle (dist + node_modules).";
     };
 
+    nodePackage = mkOption {
+      type = types.package;
+      default = pkgs.nodejs_22;
+      description = "Node.js runtime for the backend; use a current security release.";
+    };
+
     network = mkOption {
       type = types.enum [ "mainnet" "testnet" "testnet4" "signet" "regtest" ];
       default = "signet";
@@ -225,7 +231,7 @@ in {
       serviceConfig = {
         # When passwordFile is set, render the config (with the secret injected).
         ExecStartPre = lib.optional useFile renderConfig;
-        ExecStart = "${pkgs.nodejs_22}/bin/node --max-old-space-size=2048 ${cfg.backendPackage}/dist/index.js";
+        ExecStart = "${cfg.nodePackage}/bin/node --max-old-space-size=2048 ${cfg.backendPackage}/dist/index.js";
         Restart = "on-failure";
         RestartSec = 10;
         StateDirectory = "ducat-mempool";
