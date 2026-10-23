@@ -138,6 +138,12 @@ in {
       description = "Pre-built backend bundle (dist + node_modules).";
     };
 
+    nodePackage = mkOption {
+      type = types.package;
+      default = import ./node-security.nix { inherit pkgs; };
+      description = "Node.js runtime for the backend; use a current security release.";
+    };
+
     network = mkOption {
       type = types.enum [ "mainnet" "testnet" "testnet4" "signet" "regtest" ];
       default = "signet";
@@ -202,7 +208,8 @@ in {
     # socket connect succeeds without a password.
     services.mysql = {
       enable = mkDefault true;
-      package = mkDefault pkgs.mariadb;
+      # Keep the existing database major across nixpkgs security upgrades.
+      package = mkDefault pkgs.mariadb_1011;
       ensureDatabases = [ "mempool" ];
       ensureUsers = [{
         name = "ducat-mempool";
@@ -225,10 +232,10 @@ in {
       serviceConfig = {
         # When passwordFile is set, render the config (with the secret injected).
         ExecStartPre = lib.optional useFile renderConfig;
-        ExecStart = "${pkgs.nodejs_22}/bin/node --max-old-space-size=2048 ${cfg.backendPackage}/dist/index.js";
-        Restart = "on-failure";
+        ExecStart = "${cfg.nodePackage}/bin/node --max-old-space-size=2048 ${cfg.backendPackage}/dist/index.js";
+        Restart = "always";
         RestartSec = 10;
-        StateDirectory = "ducat-mempool";
+        StateDirectory = "ducat-mempool/cache";
         StateDirectoryMode = "0750";
         RuntimeDirectory = "ducat-mempool";
         RuntimeDirectoryMode = "0700";
